@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"html/template"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -41,7 +43,7 @@ func NewServer(log *slog.Logger, cfg *config.Config, svc *service.Service) *Serv
 }
 
 // Start запускает сервер (не блокирует). Возвращает функцию для ожидания завершения.
-func (s *Server) Start() error {
+func (s *Server) Start() {
 	s.httpServer.Handler = s.registerRouter()
 
 	s.log.Info("starting http server", slog.String("addr", s.cfg.HTTPPort))
@@ -50,7 +52,6 @@ func (s *Server) Start() error {
 			s.log.Error("http server stopped", slog.Any("err", err))
 		}
 	}()
-	return nil
 }
 
 // Shutdown останавливает сервер с graceful shutdown.
@@ -70,6 +71,7 @@ func (s *Server) registerRouter() http.Handler {
 	r.Use(middleware.Timeout(s.cfg.ExecTimeoutSec))
 
 	// Хэндлеры
+	r.Get("/", s.homeHandler)
 	r.Get("/health", s.healthCheck)
 	r.Get("/server_list", s.serverList)
 	r.Get("/speedtest", s.speedtest)
@@ -108,4 +110,56 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+type PageData struct {
+	Title   string
+	Message string
+	Time    string
+	Links   []Link
+}
+
+type Link struct {
+	URL         string
+	Title       string
+	Description string
+}
+
+func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
+	data := PageData{
+		Title:   "Speedtest Service",
+		Message: "Сервис для тестирования скорости интернета, время выполнения теста скорости порядка 40 секунд",
+		Time:    time.Now().Format("2006-01-02 15:04:05"),
+		Links: []Link{
+			{URL: "/speedtest", Title: "/speedtest", Description: "Запуск теста скорости"},
+			{URL: "/server_list", Title: "/server_list", Description: "Список серверов"},
+			{URL: "/health", Title: "/health", Description: "Статус сервиса"},
+		},
+	}
+
+	tmpl := template.Must(template.New("home").Parse(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{.Title}}</title>
+</head>
+<body>
+    <h1>{{.Title}}</h1>
+    <p>{{.Message}}</p>
+    
+    <div>
+        {{range .Links}}
+        <div class="link-item">
+            <a href="{{.URL}}">{{.Title}}</a>
+            <span class="link-desc">{{.Description}}</span>
+        </div>
+        {{end}}
+    </div>
+    
+    <p>Время: {{.Time}}</p>
+</body>
+</html>`))
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = tmpl.Execute(w, data)
 }

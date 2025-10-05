@@ -36,7 +36,7 @@ func (s *Service) RunSpeedtest(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	res := s.metrics(req)
+	res := s.ToPrometheusMetrics(req)
 
 	return res, nil
 }
@@ -58,44 +58,38 @@ func (s *Service) ToPrometheusMetrics(res *entities.SpeedtestResult) string {
 	b.WriteString("# TYPE qms_speedtest_download_mbps gauge\n")
 	b.WriteString(fmt.Sprintf("qms_speedtest_download_mbps %.6f\n", res.Download))
 
+	b.WriteString("# HELP qms_speedtest_download_ping Download ping stats\n")
+	b.WriteString("# TYPE qms_speedtest_download_ping gauge\n")
+	pingStatDown := s.getLabelsPing(&res.DownloadPing)
+	b.WriteString(fmt.Sprintf("qms_speedtest_download_ping{%s} 1\n", pingStatDown))
+
 	b.WriteString("# HELP qms_speedtest_upload_mbps Upload speed in Mbps\n")
 	b.WriteString("# TYPE qms_speedtest_upload_mbps gauge\n")
 	b.WriteString(fmt.Sprintf("qms_speedtest_upload_mbps %.6f\n", res.Upload))
 
-	// Несколько label-меток с информацией (как отдельный gauge со значением 1)
-	labels := fmt.Sprintf("server=\"%s\",city=\"%s\",region=\"%s\",ip=\"%s\",isp=\"%s\"",
-		escape(res.Server), escape(res.City), escape(res.RegionName), escape(res.IP), escape(res.ISP))
+	b.WriteString("# HELP qms_speedtest_upload_ping Upload ping stats\n")
+	b.WriteString("# TYPE qms_speedtest_upload_ping gauge\n")
+	pingStatUpload := s.getLabelsPing(&res.UploadPing)
+	b.WriteString(fmt.Sprintf("qms_speedtest_upload_ping{%s} 1\n", pingStatUpload))
+
+	labels := fmt.Sprintf("datetime=\"%s\",server=\"%s\",city=\"%s\",region=\"%s\",ip=\"%s\",isp=\"%s\",data=\"%f\"",
+		escape(res.DateTime), escape(res.Server), escape(res.City), escape(res.RegionName), escape(res.IP), escape(res.ISP), res.Data)
 	b.WriteString("# HELP qms_speedtest_info Meta information\n")
 	b.WriteString("# TYPE qms_speedtest_info gauge\n")
 	b.WriteString(fmt.Sprintf("qms_speedtest_info{%s} 1\n", labels))
 
+	b.WriteString("# HELP qms_speedtest_scrape_duration_seconds Duration speedtest in seconds\n")
+	b.WriteString("# TYPE qms_speedtest_scrape_duration_seconds gauge\n")
+	b.WriteString(fmt.Sprintf("qms_speedtest_scrape_duration_seconds %.2f\n", res.Duration.Seconds()))
+
 	return b.String()
 }
 
-func (s *Service) getLabels(res *entities.SpeedtestResult) string {
-	return fmt.Sprintf(`datetime="%s",server="%s",city="%s",region_name="%s",ip="%s",isp="%s",ping="%d",jitter="%d",data="%s"`,
-		res.DateTime, res.Server, res.City, res.RegionName, res.IP, res.ISP, res.Ping, res.Jitter, res.Data)
-}
+func (s *Service) getLabelsPing(res *entities.PingStats) string {
+	labels := fmt.Sprintf("count=\"%d\",min=\"%d\",max=\"%d\",mean=\"%d\",median=\"%d\",iqr=\"%d\",iqm=\"%d\",jitter=\"%d\"",
+		res.Count, res.Min, res.Max, res.Mean, res.Median, res.IQR, res.IQM, res.Jitter)
 
-func (s *Service) metrics(res *entities.SpeedtestResult) string {
-	labels := s.getLabels(res)
-	status := 0
-	if res.ResultURL != "" {
-		status = 1
-	}
-
-	return fmt.Sprintf(`# HELP speedtest_download_speed_Bps Download speed
-# TYPE speedtest_download_speed_Bps gauge
-speedtest_download_speed_Bps{%s} %f
-# HELP speedtest_upload_speed_Bps Upload speed
-# TYPE speedtest_upload_speed_Bps gauge  
-speedtest_upload_speed_Bps{%s} %f
-# HELP speedtest_up Status
-# TYPE speedtest_up gauge
-speedtest_up{result="%s"} %d`,
-		labels, res.Download,
-		labels, res.Upload,
-		res.ResultURL, status)
+	return labels
 }
 
 func escape(s string) string {

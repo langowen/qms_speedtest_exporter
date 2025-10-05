@@ -1,5 +1,7 @@
 package entities
 
+import "time"
+
 // Server описывает сервер speedtest.
 type Server struct {
 	ID          int    `json:"id"`
@@ -30,18 +32,19 @@ type PingStats struct {
 
 // SpeedtestResult результат теста скорости, совместим с JSON от qms_lib.
 type SpeedtestResult struct {
-	DateTime     string    `json:"datetime"`
-	Server       string    `json:"server"`
-	City         string    `json:"city"`
-	RegionName   string    `json:"region_name"`
-	IP           string    `json:"ip"`
-	ISP          string    `json:"isp"`
-	Ping         int       `json:"ping"`
-	Jitter       int       `json:"jitter"`
-	Download     float64   `json:"download"`
-	DownloadPing PingStats `json:"download_ping"`
-	Upload       float64   `json:"upload"`
-	UploadPing   PingStats `json:"upload_ping"`
-	Data         string    `json:"data"`
-	ResultURL    string    `json:"result"`
+	DateTime     string        `json:"datetime"`
+	Server       string        `json:"server"`
+	City         string        `json:"city"`
+	RegionName   string        `json:"region_name"`
+	IP           string        `json:"ip"`
+	ISP          string        `json:"isp"`
+	Ping         int           `json:"ping"`
+	Jitter       int           `json:"jitter"`
+	Download     float64       `json:"download"`
+	DownloadPing PingStats     `json:"download_ping"`
+	Upload       float64       `json:"upload"`
+	UploadPing   PingStats     `json:"upload_ping"`
+	Data         float32       `json:"data"`
+	ResultURL    string        `json:"result"`
+	Duration     time.Duration `json:"duration"`
 }

@@ -32,6 +32,7 @@ func (c *Client) GetServers(ctx context.Context) ([]entities.Server, error) {
 
 	start := time.Now()
 	if err := cmd.Run(); err != nil {
+		c.log.Error("Failed to get servers", "error", err)
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return nil, entities.ErrTimeout
 		}
@@ -75,17 +76,17 @@ func (c *Client) RunSpeedtest(ctx context.Context) (*entities.SpeedtestResult, e
 		default:
 			// Проверяем, является ли ошибка "signal: aborted"
 			if isAbortError(err) {
-				c.log.Info("⚠️ Speedtest aborted (expected in non-TTY environment)", slog.Any("err", err))
+				c.log.Debug("⚠️ Speedtest aborted (expected in non-TTY environment)", slog.Any("err", err))
 				// Игнорируем только эту конкретную ошибку
 			} else {
-				c.log.Warn("speedtest run returned error", slog.Any("err", err))
+				c.log.Error("speedtest run returned error", slog.Any("err", err))
 				return nil, fmt.Errorf("speedtest failed: %v", err)
 			}
 		}
 
 	}
 
-	c.log.Info("speedtest finished", slog.Duration("duration", time.Since(start)))
+	c.log.Debug("speedtest finished", slog.Duration("duration", time.Since(start)))
 
 	b, err := os.ReadFile(c.cfg.TestResultPath)
 	if err != nil {
@@ -93,8 +94,10 @@ func (c *Client) RunSpeedtest(ctx context.Context) (*entities.SpeedtestResult, e
 	}
 	var res entities.SpeedtestResult
 	if err := json.Unmarshal(b, &res); err != nil {
+		c.log.Error("parse speedtest result", slog.Any("err", err))
 		return nil, fmt.Errorf("parse test result: %w", err)
 	}
+	res.Duration = time.Since(start)
 	return &res, nil
 }
 

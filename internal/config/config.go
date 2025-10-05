@@ -36,7 +36,7 @@ func Load(logger *slog.Logger) (*Config, error) {
 			slog.String("binary_path", cfg.BinaryPath),
 			slog.String("server_data", cfg.ServerDataPath),
 			slog.String("test_result", cfg.TestResultPath),
-			slog.Duration("exec_timeout_sec", cfg.ExecTimeoutSec),
+			slog.Float64("exec_timeout_sec", cfg.ExecTimeoutSec.Seconds()),
 		)
 	}
 

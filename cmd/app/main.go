@@ -16,7 +16,7 @@ import (
 
 func main() {
 	// Логгер slog
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo, AddSource: true}))
 	slog.SetDefault(logger)
 
 	// Конфигурация
@@ -28,7 +28,7 @@ func main() {
 
 	// HTTP-сервер (внутренний порт)
 	srv := http_server.NewServer(logger, cfg, svc)
-	_ = srv.Start()
+	srv.Start()
 
 	// Graceful shutdown по сигналам
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -37,5 +37,8 @@ func main() {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	_ = srv.Shutdown(shutdownCtx)
+	err := srv.Shutdown(shutdownCtx)
+	if err != nil {
+		logger.Error("shutting down http server", "error", err)
+	}
 }
