@@ -1,16 +1,8 @@
 services:
   qms-speedtest-exporter:
-    image: ${DOCKER_REGISTRY:-docker.io}/${DOCKER_USERNAME:-langowen}/qms-speedtest-exporter:${VERSION:-latest}
+    image: langowen/qms-speedtest-exporter:${VERSION:-latest}
     container_name: qms-speedtest-exporter
     platform: linux/amd64
     ports:
       - "${HTTP_PORT:-8080}:8080"
-    volumes:
-      - ./data:/app/data
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
