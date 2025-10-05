@@ -1,0 +1,7 @@
+scrape_configs:
+  - job_name: 'speedtest'
+    scrape_interval: 60m
+    scrape_timeout:  120s
+    metrics_path: /speedtest
+    static_configs:
+      - targets: ['qms-speedtest-exporter:8080']
