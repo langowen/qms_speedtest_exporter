@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -61,6 +62,10 @@ func (c *Client) GetServers(ctx context.Context) ([]entities.Server, error) {
 
 // RunSpeedtest запускает speedtest и парсит результат
 func (c *Client) RunSpeedtest(ctx context.Context) (*entities.SpeedtestResult, error) {
+	if err := os.MkdirAll(filepath.Dir(c.cfg.TestResultPath), 0755); err != nil {
+		return nil, fmt.Errorf("can't create result test directory: %w", err)
+	}
+
 	args := []string{"-O", c.cfg.TestResultPath, "-F", "json"}
 
 	if c.cfg.ServerID != 0 {
@@ -76,7 +81,7 @@ func (c *Client) RunSpeedtest(ctx context.Context) (*entities.SpeedtestResult, e
 		default:
 			// Проверяем, является ли ошибка "signal: aborted"
 			if isAbortError(err) {
-				c.log.Debug("⚠️ Speedtest aborted (expected in non-TTY environment)", slog.Any("err", err))
+				c.log.Debug("Speedtest aborted (expected in non-TTY environment)", slog.Any("err", err))
 				// Игнорируем только эту конкретную ошибку
 			} else {
 				c.log.Error("speedtest run returned error", slog.Any("err", err))
@@ -126,14 +131,13 @@ func isAbortError(err error) bool {
 		return false
 	}
 
-	// Проверяем разные варианты представления ошибки
 	errorStr := err.Error()
 
 	// Варианты, которые могут быть у "signal: aborted"
 	abortPatterns := []string{
 		"signal: aborted",
 		"signal: abort",
-		"exit status 134", // Код выхода для SIGABRT
+		"exit status 134",
 		"SIGABRT",
 	}
 
