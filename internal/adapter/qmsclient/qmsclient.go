@@ -88,10 +88,13 @@ func (c *Client) RunSpeedtest(ctx context.Context) (*entities.SpeedtestResult, e
 				return nil, fmt.Errorf("speedtest failed: %v", err)
 			}
 		}
-
 	}
 
 	c.log.Debug("speedtest finished", slog.Duration("duration", time.Since(start)))
+
+	if err := c.waitForFile(ctx, c.cfg.TestResultPath); err != nil {
+		return nil, fmt.Errorf("server_data not ready: %w", err)
+	}
 
 	b, err := os.ReadFile(c.cfg.TestResultPath)
 	if err != nil {
@@ -106,8 +109,14 @@ func (c *Client) RunSpeedtest(ctx context.Context) (*entities.SpeedtestResult, e
 	return &res, nil
 }
 
+func (c *Client) RemoveResult(path string) {
+	if err := os.Remove(path); err != nil {
+		c.log.Error("remove result failed", slog.Any("err", err))
+	}
+}
+
 func (c *Client) waitForFile(ctx context.Context, filename string) error {
-	ctxTimeout, cancel := context.WithTimeout(ctx, 40*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	for {
 		select {

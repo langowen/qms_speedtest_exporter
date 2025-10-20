@@ -13,6 +13,7 @@ import (
 type SpeedtestAdapter interface {
 	GetServers(ctx context.Context) ([]entities.Server, error)
 	RunSpeedtest(ctx context.Context) (*entities.SpeedtestResult, error)
+	RemoveResult(path string)
 }
 
 // Service бизнес-логика поверх адаптера.
@@ -26,7 +27,16 @@ func NewService(adapter SpeedtestAdapter, cfg *config.Config) *Service {
 }
 
 func (s *Service) GetServers(ctx context.Context) ([]entities.Server, error) {
-	return s.adapter.GetServers(ctx)
+	res, err := s.adapter.GetServers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		s.adapter.RemoveResult(s.cfg.ServerDataPath)
+	}()
+
+	return res, nil
 }
 
 func (s *Service) RunSpeedtest(ctx context.Context) (string, error) {
@@ -37,6 +47,10 @@ func (s *Service) RunSpeedtest(ctx context.Context) (string, error) {
 	}
 
 	res := s.ToPrometheusMetrics(req)
+
+	go func() {
+		s.adapter.RemoveResult(s.cfg.TestResultPath)
+	}()
 
 	return res, nil
 }
