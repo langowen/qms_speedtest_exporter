@@ -78,7 +78,8 @@ func (s *Server) registerRouter() http.Handler {
 	r.Get("/server_list", s.serverList)
 	r.Get("/speedtest", s.speedtest)
 
-	r.Mount("/debug/pprof", http.DefaultServeMux)
+	r.Handle("/debug/pprof", http.DefaultServeMux)
+	r.Handle("/debug/pprof/*", http.DefaultServeMux)
 
 	return r
 }
