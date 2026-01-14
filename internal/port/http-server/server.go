@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/langowen/qms_speedtest_exporter/internal/entities"
@@ -75,6 +77,8 @@ func (s *Server) registerRouter() http.Handler {
 	r.Get("/health", s.healthCheck)
 	r.Get("/server_list", s.serverList)
 	r.Get("/speedtest", s.speedtest)
+
+	r.Mount("/debug/pprof", http.DefaultServeMux)
 
 	return r
 }
