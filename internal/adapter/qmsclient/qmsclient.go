@@ -73,7 +73,8 @@ func (c *Client) RunSpeedtest(ctx context.Context) (*entities.SpeedtestResult, e
 	}
 
 	start := time.Now()
-	cmd := exec.CommandContext(ctx, c.cfg.BinaryPath, args...)
+	cmd := exec.CommandContext(ctx, "sh", "-c",
+		fmt.Sprintf("ulimit -c 0 && %s %s", c.cfg.BinaryPath, strings.Join(args, " ")))
 	if err := cmd.Run(); err != nil {
 		select {
 		case <-ctx.Done():
