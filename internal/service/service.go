@@ -9,6 +9,8 @@ import (
 	"github.com/langowen/qms_speedtest_exporter/internal/entities"
 )
 
+const estimatedSize = 2048
+
 // SpeedtestAdapter интерфейс для адаптера qmsclient.
 type SpeedtestAdapter interface {
 	GetServers(ctx context.Context) ([]entities.Server, error)
@@ -32,9 +34,7 @@ func (s *Service) GetServers(ctx context.Context) ([]entities.Server, error) {
 		return nil, err
 	}
 
-	go func() {
-		s.adapter.RemoveResult(s.cfg.ServerDataPath)
-	}()
+	s.adapter.RemoveResult(s.cfg.ServerDataPath)
 
 	return res, nil
 }
@@ -48,17 +48,16 @@ func (s *Service) RunSpeedtest(ctx context.Context) (string, error) {
 
 	res := s.ToPrometheusMetrics(req)
 
-	go func() {
-		s.adapter.RemoveResult(s.cfg.TestResultPath)
-	}()
+	s.adapter.RemoveResult(s.cfg.TestResultPath)
 
 	return res, nil
 }
 
 // ToPrometheusMetrics преобразует результат speedtest в формат Prometheus exposition (text/plain; version=0.0.4)
 func (s *Service) ToPrometheusMetrics(res *entities.SpeedtestResult) string {
-	// Простые gauge-метрики без labels для минимальной совместимости
 	var b strings.Builder
+	b.Grow(estimatedSize)
+
 	// помощь по метрикам
 	b.WriteString("# HELP qms_speedtest_ping_ms Average ping in ms\n")
 	b.WriteString("# TYPE qms_speedtest_ping_ms gauge\n")

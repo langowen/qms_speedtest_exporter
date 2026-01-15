@@ -118,6 +118,9 @@ func (c *Client) RemoveResult(path string) {
 func (c *Client) waitForFile(ctx context.Context, filename string) error {
 	ctxTimeout, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+
+	retryCount := 0
+
 	for {
 		select {
 		case <-ctxTimeout.Done():
@@ -127,10 +130,11 @@ func (c *Client) waitForFile(ctx context.Context, filename string) error {
 				c.log.Debug("file ready", slog.String("file", filename))
 				return nil
 			}
-			i := 0
-			i++
-			sleepTime := time.Duration(i) * 100 * time.Millisecond
-			time.Sleep(sleepTime * time.Millisecond)
+
+			retryCount++
+
+			sleepTime := time.Duration(retryCount) * 100 * time.Millisecond
+			time.Sleep(sleepTime)
 		}
 	}
 }
