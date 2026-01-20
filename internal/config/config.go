@@ -17,9 +17,10 @@ type Config struct {
 	TestResultPath string        `env:"TEST_RESULT_PATH" env-default:"data/test.json"`
 	ExecTimeoutSec time.Duration `env:"EXEC_TIMEOUT_SEC" env-default:"120s"`
 	ServerID       int           `env:"SERVER_ID" env-default:"0"`
+	LogLevel       string        `env:"LOG_LEVEL" env-default:"info"`
 }
 
-func Load(logger *slog.Logger) (*Config, error) {
+func Load() (*Config, error) {
 	// Загружаем .env, если есть
 	_ = godotenv.Load()
 
@@ -30,15 +31,13 @@ func Load(logger *slog.Logger) (*Config, error) {
 		log.Fatalf("Error reading env %v", err)
 	}
 
-	if logger != nil {
-		logger.Info("config loaded",
-			slog.String("http_addr", cfg.HTTPPort),
-			slog.String("binary_path", cfg.BinaryPath),
-			slog.String("server_data", cfg.ServerDataPath),
-			slog.String("test_result", cfg.TestResultPath),
-			slog.Float64("exec_timeout_sec", cfg.ExecTimeoutSec.Seconds()),
-		)
-	}
+	slog.Info("config loaded",
+		slog.String("http_addr", cfg.HTTPPort),
+		slog.String("binary_path", cfg.BinaryPath),
+		slog.String("server_data", cfg.ServerDataPath),
+		slog.String("test_result", cfg.TestResultPath),
+		slog.Float64("exec_timeout_sec", cfg.ExecTimeoutSec.Seconds()),
+	)
 
 	return cfg, nil
 }

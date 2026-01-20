@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,12 +16,16 @@ import (
 )
 
 func main() {
-	// Логгер slog
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo, AddSource: true}))
-	slog.SetDefault(logger)
 
 	// Конфигурация
-	cfg, _ := config.Load(logger)
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("failed to load config", "error", err)
+	}
+
+	// Логгер slog
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: parseLogLevel(cfg.LogLevel)}))
+	slog.SetDefault(logger)
 
 	// Зависимости: адаптер и сервис
 	adapter := qmsclient.NewQMCClient(logger, cfg)
@@ -37,8 +42,23 @@ func main() {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	err := srv.Shutdown(shutdownCtx)
+	err = srv.Shutdown(shutdownCtx)
 	if err != nil {
 		logger.Error("shutting down http server", "error", err)
+	}
+}
+
+func parseLogLevel(levelStr string) slog.Level {
+	switch strings.ToLower(levelStr) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }
